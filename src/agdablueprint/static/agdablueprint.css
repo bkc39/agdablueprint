@@ -1,0 +1,27 @@
+/* agdablueprint web theme tweaks, layered on the plasTeX HTML5 theme and the
+ * dependency-graph styles shipped by plastexdepgraph. */
+
+a.github_link,
+a.issue_link {
+  font-weight: normal;
+  font-size: 90%;
+  text-decoration: none;
+  color: inherit;
+}
+
+/* The "Agda" button shown in theorem headers and graph modals. */
+button.modal.agda,
+.agda_link {
+  font-weight: bold;
+  font-family: "DejaVu Sans Mono", monospace;
+}
+
+.agda_decl {
+  font-family: "DejaVu Sans Mono", monospace;
+  word-break: break-all;
+}
+
+/* The formalization checkmark in theorem headers. */
+.thm_header_extras {
+  color: #1cac78;
+}
