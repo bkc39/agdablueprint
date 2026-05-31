@@ -16,6 +16,12 @@
       # The Python runtime dependencies, kept in one place so the package and
       # the devShell agree.
       pyDeps = ps: with ps; [ plasTeX plastexdepgraph pygraphviz click ];
+
+      # Agda with the standard library available so blueprints whose .agda-lib
+      # `depend:`s on standard-library type-check (and so `checkdecls` can
+      # resolve stdlib imports). This is the `agda.withPackages [standard-library]`
+      # wrinkle from the end-to-end test (issue #3).
+      agdaWithStdlib = pkgs: pkgs.agda.withPackages (p: [ p.standard-library ]);
     in
     {
       packages = forAllSystems ({ pkgs, ... }: rec {
@@ -29,7 +35,7 @@
           nativeCheckInputs = [ pkgs.python3Packages.pytestCheckHook ];
           # Agda + graphviz are runtime tools invoked by the CLI, exposed via PATH.
           makeWrapperArgs = [
-            "--prefix PATH : ${pkgs.lib.makeBinPath [ pkgs.agda pkgs.graphviz ]}"
+            "--prefix PATH : ${pkgs.lib.makeBinPath [ (agdaWithStdlib pkgs) pkgs.graphviz ]}"
           ];
         };
         default = agdablueprint;
@@ -41,7 +47,7 @@
             (pkgs.python3.withPackages (ps: (pyDeps ps) ++ [ ps.pytest ps.hatchling ]))
             pkgs.black
             pkgs.pyright
-            pkgs.agda
+            (agdaWithStdlib pkgs)
             pkgs.graphviz
             # texlive scheme used for the `pdf` build path; medium keeps the
             # closure reasonable while covering the AMS/blueprint preamble.

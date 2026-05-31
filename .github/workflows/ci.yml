@@ -32,3 +32,16 @@ jobs:
         run: nix build .#agdablueprint --print-build-logs
       - name: Run tests in devShell
         run: nix develop --command pytest -q
+
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v27
+        with:
+          extra_nix_config: |
+            experimental-features = nix-command flakes
+      # The stdlib-backed end-to-end test (web + pdf + checkdecls). The dev shell
+      # provides agda-with-standard-library, plasTeX, graphviz and texlive.
+      - name: End-to-end (stdlib example)
+        run: nix develop --command pytest -q tests/test_e2e_stdlib.py

@@ -113,12 +113,23 @@ def typecheck(
     include_dirs: list[Path],
     agda: str | None = None,
     extra_args: list[str] | None = None,
+    cwd: str | Path | None = None,
 ) -> subprocess.CompletedProcess:
-    """Run ``agda`` on ``file`` with the given include directories."""
+    """Run ``agda`` on ``file`` with the given include directories.
+
+    ``cwd`` sets the working directory for the run. Agda keys its ``.agda-lib``
+    project (and therefore ``depend:`` library resolution) off the working
+    directory, so callers checking a library-backed project should pass its root.
+    """
     exe = find_agda(agda)
     cmd = [exe]
     for inc in include_dirs:
         cmd += ["-i", str(inc)]
     cmd += list(extra_args or [])
     cmd.append(str(file))
-    return subprocess.run(cmd, capture_output=True, text=True)
+    return subprocess.run(
+        cmd,
+        capture_output=True,
+        text=True,
+        cwd=cwd if cwd is None else str(cwd),
+    )

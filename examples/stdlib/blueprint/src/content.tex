@@ -1,0 +1,31 @@
+% Content for the stdlib-backed end-to-end example. It references real
+% declarations from src/Sum.agda and agda-stdlib, plus ONE intentionally-missing
+% declaration (\agda{Sum.triple}) so `agdablueprint checkdecls` is expected to
+% flag it and exit non-zero — that failure is what the E2E test asserts.
+
+\begin{definition}\label{def:double}
+  \agda{Sum.double}\agdaok
+  The \emph{double} of a natural number $n$ is $n + n$.
+\end{definition}
+
+\begin{lemma}\label{lem:plus}\uses{def:double}
+  \agda{Data.Nat._+_}\stdlibok
+  Addition of natural numbers, provided by the standard library.
+\end{lemma}
+
+\begin{theorem}\label{thm:double-zero}\uses{def:double}
+  \agda{Sum.double-zero}\agdaok
+  The double of zero is zero.
+\end{theorem}
+
+\begin{theorem}\label{thm:plus-comm}\uses{lem:plus}
+  \agda{Sum.+-comm′}\agdaok
+  Addition of natural numbers is commutative.
+\end{theorem}
+
+\begin{theorem}\label{thm:triple}\uses{def:double}
+  % Deliberately points at a declaration that does NOT exist in src/Sum.agda;
+  % `agdablueprint checkdecls` must report Sum.triple as MISSING.
+  \agda{Sum.triple}
+  The triple of a natural number (stated here but not yet formalized).
+\end{theorem}

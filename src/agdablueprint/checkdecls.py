@@ -98,7 +98,10 @@ def check_declarations(
         # Worst case: one Agda run per missing name, plus a final clean run.
         for _ in range(len(names) + 1):
             checker.write_text(_render_checker(remaining, project_modules))
-            proc = typecheck(checker, includes, agda=agda)
+            # Run from the project root so Agda finds the project's `.agda-lib`
+            # and applies its `depend:` libraries (e.g. agda-stdlib); resolution
+            # is keyed off the working directory, not the checker's location.
+            proc = typecheck(checker, includes, agda=agda, cwd=project.root)
             if proc.returncode == 0:
                 break
             output = proc.stdout + proc.stderr

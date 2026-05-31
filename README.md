@@ -10,9 +10,10 @@ to the formal Agda code that realizes it, and renders an interactive
 proved. It is a coordination tool for large collaborative formalization
 projects.
 
-> **Status: early development (v0.0.1).** Phase 1 (project skeleton) is in
-> place; the plasTeX plugin, Agda declaration checker, and CLI are being built
-> out. See `docs`/the issue tracker for the roadmap.
+> **Status: early development (v0.0.1).** The plasTeX plugin, Agda declaration
+> checker, and the `new`/`web`/`pdf`/`serve`/`all` CLI are in place and covered
+> by an end-to-end test against a real agda-stdlib-backed project. See the issue
+> tracker for the roadmap (automatic status detection, nixpkgs packaging).
 
 ## How it works
 
@@ -68,13 +69,38 @@ external prerequisites `leanblueprint` assumes for Lean.
 ## CLI
 
 ```
-agdablueprint new         # scaffold a new blueprint project   (Phase 4)
-agdablueprint web         # build the HTML dependency graph     (Phase 4)
-agdablueprint pdf         # build the PDF blueprint             (Phase 4)
-agdablueprint checkdecls  # verify \agda{...} names in Agda     (Phase 3)
-agdablueprint serve       # serve the built web blueprint       (Phase 4)
-agdablueprint all         # pdf + web + checkdecls              (Phase 4)
+agdablueprint new         # scaffold a new blueprint project
+agdablueprint web         # build the HTML dependency graph
+agdablueprint pdf         # build the PDF blueprint
+agdablueprint checkdecls  # verify \agda{...} names in Agda
+agdablueprint serve       # serve the built web blueprint
+agdablueprint all         # pdf + web + checkdecls
 ```
+
+## Project layout
+
+`agdablueprint new` scaffolds the blueprint next to your Agda code, mirroring
+`leanblueprint`:
+
+```
+my-project/
+├── my-project.agda-lib      # your Agda library (depend: standard-library, …)
+├── src/                     # your Agda modules
+├── plastex.cfg              # plasTeX config (plugins = agdablueprint)
+└── blueprint/
+    ├── agda_decls           # written by `web`; the input to `checkdecls`
+    └── src/
+        ├── web.tex          # web entry point (plasTeX → dependency graph)
+        ├── print.tex        # pdf entry point (latexmk/pdflatex)
+        ├── content.tex      # your exposition (shared by web + print)
+        ├── agdablueprint.sty
+        └── macros/{common,web,print}.tex
+```
+
+`agdablueprint web` builds `blueprint/web/`, `agdablueprint pdf` builds
+`blueprint/print/`, and `agdablueprint all` runs both and then `checkdecls`
+against the project's `.agda-lib`. A worked, stdlib-backed example lives in
+[`examples/stdlib`](examples/stdlib).
 
 ## Credits
 
