@@ -1,0 +1,38 @@
+\documentclass{article}
+
+% Minimal agdablueprint web document. Build it with:
+%   plastex --plugins=agdablueprint blueprint.tex
+% (the `agdablueprint` plugin makes \usepackage{agdablueprint} available, which
+%  in turn pulls in the plastexdepgraph dependency-graph machinery).
+
+\usepackage{amsthm}
+\usepackage{agdablueprint}
+
+\newtheorem{definition}{Definition}
+\newtheorem{lemma}[definition]{Lemma}
+\newtheorem{theorem}[definition]{Theorem}
+
+\title{Minimal agdablueprint example}
+
+\begin{document}
+\maketitle
+
+\begin{definition}\label{def:even}
+  \agda{Data.Nat.Even}\agdaok
+A natural number $n$ is \emph{even} if $n = 2k$ for some $k$.
+\end{definition}
+
+\begin{lemma}\label{lem:zero-even}\uses{def:even}
+  \agda{Data.Nat.Even.zero-even}\agdaok
+Zero is even.
+\end{lemma}
+
+\begin{theorem}\label{thm:sum-even}\uses{def:even, lem:zero-even}
+The sum of two even numbers is even.
+\end{theorem}
+
+\begin{proof}\uses{lem:zero-even}
+By induction; not yet formalized.
+\end{proof}
+
+\end{document}

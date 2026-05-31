@@ -1,0 +1,19 @@
+% Adapted from leanblueprint (Patrick Massot), Apache-2.0:
+%   https://github.com/PatrickMassot/leanblueprint
+% The theorem-environment block below is reused verbatim. See the NOTICE file.
+%
+% Macros and settings shared by BOTH the pdf and web builds.
+% This should hold most of your project's macros.
+
+% The theorem-like environments below are the ones that appear by default in
+% the dependency graph. They all share the `theorem' counter and are never
+% reset. Add e.g. [chapter] at the end of the first line to number within
+% chapters. See plastexdepgraph's `thms' option to customize which environments
+% are graphed.
+\newtheorem{theorem}{Theorem}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{corollary}[theorem]{Corollary}
+
+\theoremstyle{definition}
+\newtheorem{definition}[theorem]{Definition}

@@ -11,9 +11,14 @@ It builds on, and is conceptually derived from, the following projects:
     the proof-assistant-agnostic dependency-graph plasTeX plugin that
     agdablueprint loads alongside its own plugin. Apache-2.0.
   - leanblueprint (https://github.com/PatrickMassot/leanblueprint), the Lean
-    blueprint tool whose CLI shape, LaTeX macro layer, and web theme inspired
-    the Agda-flavored equivalents here. Apache-2.0.
+    blueprint tool by Patrick Massot. Apache-2.0. agdablueprint's CLI shape and
+    web theme follow leanblueprint, and its LaTeX macro layer
+    (macros/common.tex, macros/print.tex, agdablueprint.sty) is adapted directly
+    from leanblueprint's templates: the \uses / \proves print definitions, the
+    package stub (\DeclareOption*{}, \ProcessOptions, \graphcolor), and the
+    theorem-environment block are reused largely verbatim.
 
-The Lean-specific pieces of leanblueprint are not used; agdablueprint provides
-Agda-flavored macros (\agda, \agdaok, \agdanotready) and an Agda declaration
-checker in their place.
+The change made to those files is the replacement of leanblueprint's Lean-named
+status macros (\lean, \leanok, \mathlibok) with Agda-flavored ones (\agda,
+\agdaok, \agdanotready, \stdlibok); agdablueprint also adds an Agda declaration
+checker in place of leanblueprint's Lean-specific tooling.
