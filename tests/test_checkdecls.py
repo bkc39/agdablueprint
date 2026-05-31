@@ -31,7 +31,11 @@ def test_read_agda_decls(tmp_path):
 @needs_agda
 def test_all_present():
     result = check_declarations(
-        ["Blueprint.Demo.Even", "Blueprint.Demo.zero-even", "Blueprint.Demo.even-zero"],
+        [
+            "Blueprint.Demo.Even",
+            "Blueprint.Demo.zero-even",
+            "Blueprint.Demo.even-zero",
+        ],
         FIXTURE,
     )
     assert result.ok, (result.missing, result.errors)

@@ -39,6 +39,8 @@
         default = pkgs.mkShell {
           packages = [
             (pkgs.python3.withPackages (ps: (pyDeps ps) ++ [ ps.pytest ps.hatchling ]))
+            pkgs.black
+            pkgs.pyright
             pkgs.agda
             pkgs.graphviz
             # texlive scheme used for the `pdf` build path; medium keeps the

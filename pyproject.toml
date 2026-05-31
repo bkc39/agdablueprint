@@ -47,3 +47,9 @@ packages = ["src/agdablueprint"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+[tool.black]
+line-length = 80
+
+[tool.pyright]
+include = ["src", "tests"]

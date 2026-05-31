@@ -25,6 +25,15 @@ Options
 Any option not understood here is forwarded to the ``depgraph`` package, so e.g.
 ``thms=definition+lemma+theorem`` works as documented by plastexdepgraph.
 """
+
+# This module is glue against plasTeX's macro framework, whose type information
+# is looser than its runtime contract: `parentNode`/`ownerDocument` are typed
+# Optional but are always present while a macro is being digested/invoked, and a
+# Command's `invoke` returns `[]` to expand to nothing (matching leanblueprint),
+# which plasTeX types as `None`. Confine those framework-interaction overrides
+# here rather than relaxing pyright globally.
+# pyright: reportOptionalMemberAccess=false, reportAttributeAccessIssue=false, reportIncompatibleMethodOverride=false
+
 import string
 from pathlib import Path
 
@@ -45,6 +54,7 @@ STATIC_DIR = Path(__file__).parent.parent / "static"
 # --------------------------------------------------------------------------- #
 class home(Command):
     r"""\home{url}"""
+
     args = "url:url"
 
     def invoke(self, tex):
@@ -55,6 +65,7 @@ class home(Command):
 
 class github(Command):
     r"""\github{url}"""
+
     args = "url:url"
 
     def invoke(self, tex):
@@ -72,6 +83,7 @@ class dochome(Command):
     of ``agda --html``). Declaration links in the dependency graph are formed
     relative to it.
     """
+
     args = "url:url"
 
     def invoke(self, tex):
@@ -84,6 +96,7 @@ class dochome(Command):
 
 class graphcolor(Command):
     r"""\graphcolor{node_type}{color}{color_descr}"""
+
     args = "node_type:str color:str color_descr:str"
 
     def digest(self, tokens):
@@ -93,7 +106,10 @@ class graphcolor(Command):
         node_type = attrs["node_type"]
         if node_type not in colors:
             log.warning(f"Unknown node type {node_type}")
-        colors[node_type] = (attrs["color"].strip(), attrs["color_descr"].strip())
+        colors[node_type] = (
+            attrs["color"].strip(),
+            attrs["color_descr"].strip(),
+        )
 
 
 # --------------------------------------------------------------------------- #
@@ -138,6 +154,7 @@ class stdlibok(Command):
 
 class agda(Command):
     r"""\agda{decl list}"""
+
     args = "decls:list:nox"
 
     def digest(self, tokens):
@@ -150,6 +167,7 @@ class agda(Command):
 
 class discussion(Command):
     r"""\discussion{issue_number}"""
+
     args = "issue:str"
 
     def digest(self, tokens):
@@ -274,23 +292,32 @@ def ProcessOptions(options, document):
                     node.userdata["can_prove"] = all(
                         thm.userdata.get("agdaok") for thm in used
                     )
-                    node.userdata["proved"] = proof.userdata.get("agdaok", False)
+                    node.userdata["proved"] = proof.userdata.get(
+                        "agdaok", False
+                    )
                 else:
                     node.userdata["can_prove"] = False
                     node.userdata["proved"] = False
 
             for node in nodes:
                 node.userdata["fully_proved"] = all(
-                    n.userdata.get("proved", False) or item_kind(n) == "definition"
+                    n.userdata.get("proved", False)
+                    or item_kind(n) == "definition"
                     for n in graph.ancestors(node).union({node})
                 )
 
-        agda_decls_path = Path(document.userdata["working-dir"]).parent / "agda_decls"
-        agda_decls_path.write_text("\n".join(document.userdata.get("agda_decls", [])))
+        agda_decls_path = (
+            Path(document.userdata["working-dir"]).parent / "agda_decls"
+        )
+        agda_decls_path.write_text(
+            "\n".join(document.userdata.get("agda_decls", []))
+        )
 
     document.addPostParseCallbacks(150, make_agda_data)
 
-    document.addPackageResource([PackageCss(path=STATIC_DIR / "agdablueprint.css")])
+    document.addPackageResource(
+        [PackageCss(path=STATIC_DIR / "agdablueprint.css")]
+    )
 
     colors = document.userdata["dep_graph"]["colors"] = {
         "stdlib": ("darkgreen", "Dark green"),
@@ -378,10 +405,12 @@ def ProcessOptions(options, document):
 
     document.addPostParseCallbacks(150, make_legend)
 
-    document.userdata.setdefault("thm_header_extras_tpl", []).extend([CHECKMARK_TPL])
+    document.userdata.setdefault("thm_header_extras_tpl", []).extend(
+        [CHECKMARK_TPL]
+    )
     document.userdata.setdefault("thm_header_hidden_extras_tpl", []).extend(
         [AGDA_DECLS_TPL, GITHUB_ISSUE_TPL]
     )
-    document.userdata["dep_graph"].setdefault("extra_modal_links_tpl", []).extend(
-        [AGDA_LINKS_TPL, GITHUB_LINK_TPL]
-    )
+    document.userdata["dep_graph"].setdefault(
+        "extra_modal_links_tpl", []
+    ).extend([AGDA_LINKS_TPL, GITHUB_LINK_TPL])

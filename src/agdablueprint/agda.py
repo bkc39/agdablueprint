@@ -26,7 +26,11 @@ def find_agda(explicit: str | None = None) -> str:
     for candidate in (explicit, os.environ.get("AGDA"), "agda"):
         if not candidate:
             continue
-        resolved = shutil.which(candidate) if os.path.basename(candidate) == candidate else candidate
+        resolved = (
+            shutil.which(candidate)
+            if os.path.basename(candidate) == candidate
+            else candidate
+        )
         if resolved and Path(resolved).exists():
             return resolved
         which = shutil.which(candidate)

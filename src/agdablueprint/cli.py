@@ -81,9 +81,15 @@ def checkdecls(project_root, decls_file, agda, names) -> None:
 
     summary = f"{len(result.present)} present, {len(result.missing)} missing"
     if result.ok:
-        click.echo(click.style(f"All {len(result.present)} declarations found.", fg="green"))
+        click.echo(
+            click.style(
+                f"All {len(result.present)} declarations found.", fg="green"
+            )
+        )
     else:
-        click.echo(click.style(f"checkdecls failed: {summary}.", fg="red"), err=True)
+        click.echo(
+            click.style(f"checkdecls failed: {summary}.", fg="red"), err=True
+        )
         raise SystemExit(1)
 
 
