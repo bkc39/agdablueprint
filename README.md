@@ -28,9 +28,14 @@ Agda-flavored layer on top:
 | `\agdaok`        | Mark a statement/proof as formalized in Agda (turns the node green). |
 | `\agdanotready`  | Mark a statement as explicitly not yet started.                   |
 
-`\uses`, `\proves`, `\label`, and the theorem-like environments come straight
-from `plastexdepgraph` and are used unchanged. agdablueprint does **not** fork
-or depend on `leanblueprint`.
+On the web side, `\uses`, `\proves`, and `\label` are handled by
+`plastexdepgraph`. agdablueprint's LaTeX macro files (`macros/common.tex`,
+`macros/print.tex`, `agdablueprint.sty`) are **adapted from
+[`leanblueprint`](https://github.com/PatrickMassot/leanblueprint)'s templates**
+(Apache-2.0): the `\uses` / `\proves` print definitions, the package stub, and
+the theorem-environment block are reused largely verbatim, with leanblueprint's
+Lean-named status macros replaced by the Agda ones above. agdablueprint does not
+depend on `leanblueprint` at runtime.
 
 The `agdablueprint checkdecls` command verifies that every declaration named in
 an `\agda{...}` macro actually exists and type-checks in your Agda project.
@@ -70,6 +75,14 @@ agdablueprint checkdecls  # verify \agda{...} names in Agda     (Phase 3)
 agdablueprint serve       # serve the built web blueprint       (Phase 4)
 agdablueprint all         # pdf + web + checkdecls              (Phase 4)
 ```
+
+## Credits
+
+agdablueprint is the Agda counterpart to
+[`leanblueprint`](https://github.com/PatrickMassot/leanblueprint) by Patrick
+Massot, and adapts its LaTeX macro layer and project layout (Apache-2.0). It
+also builds on [`plastexdepgraph`](https://github.com/PatrickMassot/plastexdepgraph)
+and [`plasTeX`](https://github.com/plastex/plastex). See [NOTICE](NOTICE).
 
 ## License
 
