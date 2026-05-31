@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+.venv/
+venv/
+
+# plasTeX / LaTeX build output
+*.aux
+*.log
+*.out
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+web/
+blueprint/web/
+blueprint/print/
+
+# Agda
+*.agdai
+_build/
+MAlonzo/
+
+# Nix
+result
+result-*
+
+# macOS
+.DS_Store
