@@ -6,6 +6,7 @@ scaffolds a project, ``web``/``pdf``/``serve`` build and preview the blueprint,
 ``all`` runs pdf + web + checkdecls in one shot.
 """
 
+import os
 import shutil
 import subprocess
 import sys
@@ -318,24 +319,45 @@ def _build_web(blueprint_dir: Path, out_dir: Path | None) -> Path:
         raise click.ClickException(
             f"No web.tex found at {src}. Run `agdablueprint new` first?"
         )
-    plastex = _require_tool("plastex")
     out_dir = (out_dir or (blueprint_dir / "web")).resolve()
+    config = (blueprint_dir.parent / "plastex.cfg").resolve()
 
     # plasTeX copies its template assets read-only and does not clean the output
     # directory, so a rebuild fails to overwrite them. Start from a clean tree.
     shutil.rmtree(out_dir, ignore_errors=True)
 
-    cmd = [plastex, "--plugins=agdablueprint", f"--dir={out_dir}"]
-    config = (blueprint_dir.parent / "plastex.cfg").resolve()
+    argv = ["--plugins=agdablueprint", f"--dir={out_dir}"]
     if config.exists():
-        cmd += ["--config", str(config)]
-    cmd.append("web.tex")
+        argv += ["--config", str(config)]
+    argv.append(str(src))  # absolute path: \input{…} resolves against src/
 
-    proc = subprocess.run(cmd, cwd=src_dir, capture_output=True, text=True)
-    if proc.returncode != 0:
+    # Run plasTeX *in this process* rather than shelling out to the `plastex`
+    # console script. agdablueprint and plasTeX share an environment, so the
+    # plugin is importable here; a packaged launcher, by contrast, prepends each
+    # dependency's bin to PATH, so a `plastex` subprocess would resolve to a
+    # standalone plasTeX that cannot import the plugin. plasTeX keys its working
+    # directory (and the agda_decls location) off the cwd, so run from
+    # blueprint/src.
+    old_cwd = os.getcwd()
+    try:
+        os.chdir(src_dir)
+        from plasTeX.client import main as plastex_main
+
+        plastex_main(argv)
+    except ImportError as exc:
         raise click.ClickException(
-            "plasTeX web build failed:\n" + proc.stdout + proc.stderr
+            f"plasTeX is not available ({exc}). Install the blueprint "
+            "toolchain (the Nix dev shell / blueprintEnv provides it)."
         )
+    except SystemExit as exc:
+        if exc.code:
+            raise click.ClickException(
+                f"plasTeX web build failed (exit {exc.code})."
+            )
+    except Exception as exc:
+        raise click.ClickException(f"plasTeX web build failed: {exc}")
+    finally:
+        os.chdir(old_cwd)
     return out_dir
 
 
