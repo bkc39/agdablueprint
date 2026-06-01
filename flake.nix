@@ -17,6 +17,27 @@
       # the devShell agree.
       pyDeps = ps: with ps; [ plasTeX plastexdepgraph pygraphviz click ];
 
+      # agdablueprint as an importable Python *library*. Needed so it can be put
+      # into a python.withPackages environment alongside plasTeX, which is what
+      # makes `plastex --plugins=agdablueprint` work (the plugin must be
+      # importable by the very python that runs plastex).
+      mkLib = pkgs: pkgs.python3Packages.buildPythonPackage {
+        pname = "agdablueprint";
+        version = "0.0.1";
+        pyproject = true;
+        src = ./.;
+        build-system = [ pkgs.python3Packages.hatchling ];
+        dependencies = pyDeps pkgs.python3Packages;
+        nativeCheckInputs = [ pkgs.python3Packages.pytestCheckHook ];
+      };
+
+      # A ready-to-run blueprint toolchain: a single python env exposing both the
+      # `agdablueprint` CLI and the `plastex` it drives, with the plugin
+      # importable. Deliberately does NOT bundle agda — consumers put their own
+      # `agda.withPackages [ … ]` (with the libraries their blueprint references)
+      # on PATH, so `checkdecls`/`agda --html` resolve against the right project.
+      mkBlueprintEnv = pkgs: pkgs.python3.withPackages (ps: [ (mkLib pkgs) ]);
+
       # Agda with the standard library available so blueprints whose .agda-lib
       # `depend:`s on standard-library type-check (and so `checkdecls` can
       # resolve stdlib imports). This is the `agda.withPackages [standard-library]`
@@ -38,6 +59,9 @@
             "--prefix PATH : ${pkgs.lib.makeBinPath [ (agdaWithStdlib pkgs) pkgs.graphviz ]}"
           ];
         };
+        # Python env with `agdablueprint` + `plastex` (plugin importable) for
+        # consumers/CI that supply their own agda; see `mkBlueprintEnv`.
+        blueprintEnv = mkBlueprintEnv pkgs;
         default = agdablueprint;
       });
 
