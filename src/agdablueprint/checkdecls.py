@@ -18,7 +18,7 @@ import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from agdablueprint.agda import AgdaProject, typecheck
+from agdablueprint.agda import AgdaProject, split_module, typecheck
 
 CHECKER_MODULE = "_agdablueprint_checkdecls"
 
@@ -49,18 +49,8 @@ def read_agda_decls(path: str | Path) -> list[str]:
 
 
 def _module_for(fqn: str, project_modules: set[str]) -> str:
-    """Pick the module to ``import`` so that ``fqn`` can be referenced.
-
-    Prefers the longest known project module that is a prefix of ``fqn``; falls
-    back to ``fqn`` minus its last component (covers library modules and modules
-    not discovered locally).
-    """
-    candidates = [
-        m for m in project_modules if fqn == m or fqn.startswith(m + ".")
-    ]
-    if candidates:
-        return max(candidates, key=len)
-    return fqn.rsplit(".", 1)[0] if "." in fqn else fqn
+    """Pick the module to ``import`` so that ``fqn`` can be referenced."""
+    return split_module(fqn, project_modules)[0]
 
 
 def _render_checker(names: list[str], project_modules: set[str]) -> str:

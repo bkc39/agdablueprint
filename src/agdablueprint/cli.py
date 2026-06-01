@@ -321,6 +321,10 @@ def _build_web(blueprint_dir: Path, out_dir: Path | None) -> Path:
     plastex = _require_tool("plastex")
     out_dir = (out_dir or (blueprint_dir / "web")).resolve()
 
+    # plasTeX copies its template assets read-only and does not clean the output
+    # directory, so a rebuild fails to overwrite them. Start from a clean tree.
+    shutil.rmtree(out_dir, ignore_errors=True)
+
     cmd = [plastex, "--plugins=agdablueprint", f"--dir={out_dir}"]
     config = (blueprint_dir.parent / "plastex.cfg").resolve()
     if config.exists():
