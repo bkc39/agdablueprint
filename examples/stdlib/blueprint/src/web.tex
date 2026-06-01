@@ -1,0 +1,23 @@
+% Web (plasTeX) entry point for the blueprint. Build it with:
+%   agdablueprint web
+% which runs `plastex --plugins=agdablueprint` and emits the HTML dependency
+% graph. The `agdablueprint` plugin makes \usepackage{agdablueprint} available,
+% which in turn pulls in the plastexdepgraph machinery (\uses, \proves, …).
+\documentclass{article}
+
+\usepackage{amsthm}
+\input{macros/common}
+\input{macros/web}
+\usepackage{agdablueprint}
+
+\home{https://github.com/bkc39/agdablueprint}
+\github{https://github.com/bkc39/agdablueprint}
+
+
+\title{Sum example blueprint}
+
+
+\begin{document}
+\maketitle
+\input{content}
+\end{document}

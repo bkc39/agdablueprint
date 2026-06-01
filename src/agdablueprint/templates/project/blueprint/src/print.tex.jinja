@@ -1,0 +1,18 @@
+% Print (PDF) entry point for the blueprint. Build it with:
+%   agdablueprint pdf
+% which runs latexmk/pdflatex. The web-only Agda status and graph macros are
+% made into no-ops by macros/print.tex so the same content compiles to PDF.
+\documentclass{article}
+
+\usepackage{amsthm}
+\input{macros/common}
+\input{macros/print}
+\usepackage{agdablueprint}
+
+\title{ {{- title -}} }
+{% if author %}\author{ {{- author -}} }{% endif %}
+
+\begin{document}
+\maketitle
+\input{content}
+\end{document}

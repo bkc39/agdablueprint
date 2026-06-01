@@ -1,11 +1,15 @@
 """Command-line interface for agdablueprint.
 
-Phase 1 stub: wires up the ``click`` command group and the ``version`` command
-so the ``agdablueprint`` entry point is functional. The ``new``, ``pdf``,
-``web``, ``checkdecls``, ``serve``, and ``all`` subcommands are implemented in
-later phases.
+Wires up the ``click`` command group and the user-facing workflow: ``new``
+scaffolds a project, ``web``/``pdf``/``serve`` build and preview the blueprint,
+``checkdecls`` verifies ``\\agda{...}`` declarations against the Agda project, and
+``all`` runs pdf + web + checkdecls in one shot.
 """
 
+import os
+import shutil
+import subprocess
+import sys
 from pathlib import Path
 
 import click
@@ -72,6 +76,12 @@ def checkdecls(project_root, decls_file, agda, names) -> None:
     except AgdaNotFound as exc:
         raise click.ClickException(str(exc))
 
+    if not _report_check_result(result):
+        raise SystemExit(1)
+
+
+def _report_check_result(result) -> bool:
+    """Print a CheckResult and return whether it passed."""
     for name in result.present:
         click.echo(f"  {click.style('ok', fg='green')}  {name}")
     for name in result.missing:
@@ -79,18 +89,314 @@ def checkdecls(project_root, decls_file, agda, names) -> None:
     for err in result.errors:
         click.echo(click.style("agda error:\n", fg="red") + err)
 
-    summary = f"{len(result.present)} present, {len(result.missing)} missing"
     if result.ok:
         click.echo(
             click.style(
                 f"All {len(result.present)} declarations found.", fg="green"
             )
         )
-    else:
-        click.echo(
-            click.style(f"checkdecls failed: {summary}.", fg="red"), err=True
+        return True
+    summary = f"{len(result.present)} present, {len(result.missing)} missing"
+    click.echo(
+        click.style(f"checkdecls failed: {summary}.", fg="red"), err=True
+    )
+    return False
+
+
+@cli.command()
+@click.option(
+    "--dest",
+    type=click.Path(file_okay=False, path_type=Path),
+    default=".",
+    help="Directory to scaffold the project into. Defaults to the current "
+    "directory.",
+)
+@click.option("--title", default=None, help="Blueprint title.")
+@click.option("--author", default=None, help="Author name.")
+@click.option("--github", default=None, help="Project GitHub URL.")
+@click.option(
+    "--dochome",
+    default=None,
+    help="Base URL of the generated Agda HTML docs (agda --html output).",
+)
+@click.option(
+    "--defaults",
+    "-y",
+    is_flag=True,
+    help="Use defaults for everything not given as a flag (no prompts).",
+)
+@click.option(
+    "--force", is_flag=True, help="Overwrite an existing blueprint/ directory."
+)
+def new(dest, title, author, github, dochome, defaults, force) -> None:
+    """Scaffold a new Agda blueprint project from the bundled templates."""
+    from agdablueprint.scaffold import (
+        ProjectExists,
+        ProjectMetadata,
+        scaffold_project,
+    )
+
+    if not defaults:
+        if title is None:
+            title = click.prompt("Project title", default="Blueprint")
+        if author is None:
+            author = click.prompt("Author", default="", show_default=False)
+        if github is None:
+            github = click.prompt("GitHub URL", default="", show_default=False)
+        if dochome is None:
+            dochome = click.prompt(
+                "Agda HTML docs URL", default="", show_default=False
+            )
+
+    metadata = ProjectMetadata(
+        title=title or "Blueprint",
+        author=author or "",
+        github=github or "",
+        dochome=dochome or "",
+    )
+    try:
+        scaffold_project(dest, metadata, force=force)
+    except ProjectExists as exc:
+        raise click.ClickException(str(exc))
+
+    dest = Path(dest)
+    click.echo(
+        click.style("Scaffolded blueprint project at ", fg="green") + str(dest)
+    )
+    click.echo("Next steps:")
+    click.echo("  - write your exposition in blueprint/src/content.tex")
+    click.echo("  - `agdablueprint web` to build the dependency graph")
+    click.echo("  - `agdablueprint all` to build + checkdecls")
+
+
+@cli.command()
+@click.option(
+    "--blueprint",
+    "blueprint_dir",
+    type=click.Path(file_okay=False, path_type=Path),
+    default="blueprint",
+    show_default=True,
+    help="Blueprint directory (contains src/web.tex).",
+)
+@click.option(
+    "--dir",
+    "out_dir",
+    type=click.Path(file_okay=False, path_type=Path),
+    default=None,
+    help="HTML output directory. Defaults to <blueprint>/web.",
+)
+def web(blueprint_dir, out_dir) -> None:
+    """Build the HTML dependency graph with plasTeX."""
+    out_dir = _build_web(blueprint_dir, out_dir)
+    click.echo(
+        click.style("Web blueprint built at ", fg="green") + str(out_dir)
+    )
+
+
+@cli.command()
+@click.option(
+    "--blueprint",
+    "blueprint_dir",
+    type=click.Path(file_okay=False, path_type=Path),
+    default="blueprint",
+    show_default=True,
+    help="Blueprint directory (contains src/print.tex).",
+)
+@click.option(
+    "--dir",
+    "out_dir",
+    type=click.Path(file_okay=False, path_type=Path),
+    default=None,
+    help="PDF output directory. Defaults to <blueprint>/print.",
+)
+def pdf(blueprint_dir, out_dir) -> None:
+    """Build the PDF blueprint with latexmk (or pdflatex)."""
+    pdf_path = _build_pdf(blueprint_dir, out_dir)
+    click.echo(click.style("PDF built at ", fg="green") + str(pdf_path))
+
+
+@cli.command()
+@click.option(
+    "--blueprint",
+    "blueprint_dir",
+    type=click.Path(file_okay=False, path_type=Path),
+    default="blueprint",
+    show_default=True,
+)
+@click.option(
+    "--dir",
+    "web_dir",
+    type=click.Path(file_okay=False, path_type=Path),
+    default=None,
+    help="Directory to serve. Defaults to <blueprint>/web.",
+)
+@click.option(
+    "--port", default=8000, show_default=True, help="Port to serve on."
+)
+def serve(blueprint_dir, web_dir, port) -> None:
+    """Serve the built web blueprint over HTTP."""
+    web_dir = web_dir or (blueprint_dir / "web")
+    if not web_dir.is_dir():
+        raise click.ClickException(
+            f"No web output at {web_dir}. Run `agdablueprint web` first."
         )
+    click.echo(
+        f"Serving {web_dir} at http://localhost:{port}/ (Ctrl-C to stop)"
+    )
+    try:
+        subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "http.server",
+                str(port),
+                "--directory",
+                str(web_dir),
+            ]
+        )
+    except KeyboardInterrupt:
+        pass
+
+
+@cli.command(name="all")
+@click.option(
+    "--blueprint",
+    "blueprint_dir",
+    type=click.Path(file_okay=False, path_type=Path),
+    default="blueprint",
+    show_default=True,
+)
+@click.option(
+    "--project",
+    "project_root",
+    type=click.Path(exists=True, file_okay=False, path_type=Path),
+    default=".",
+    help="Root of the Agda project (directory containing the .agda-lib).",
+)
+@click.option("--agda", default=None, help="Path to the agda executable.")
+def all_(blueprint_dir, project_root, agda) -> None:
+    """Build the PDF and web blueprints, then verify the Agda declarations."""
+    from agdablueprint.agda import AgdaNotFound
+    from agdablueprint.checkdecls import check_declarations, read_agda_decls
+
+    _build_pdf(blueprint_dir, None)
+    _build_web(blueprint_dir, None)
+
+    decls_file = blueprint_dir / "agda_decls"
+    names = read_agda_decls(decls_file) if decls_file.exists() else []
+    if not names:
+        click.echo("No \\agda{...} declarations to check.")
+        return
+    try:
+        result = check_declarations(names, project_root, agda=agda)
+    except AgdaNotFound as exc:
+        raise click.ClickException(str(exc))
+    if not _report_check_result(result):
         raise SystemExit(1)
+
+
+def _require_tool(name: str) -> str:
+    """Locate a build tool on PATH or raise a friendly click error."""
+    path = shutil.which(name)
+    if path is None:
+        raise click.ClickException(
+            f"Could not find '{name}' on PATH. Install it (the Nix dev shell "
+            f"provides it) and try again."
+        )
+    return path
+
+
+def _build_web(blueprint_dir: Path, out_dir: Path | None) -> Path:
+    """Run plasTeX on blueprint/src/web.tex and return the output directory.
+
+    plasTeX writes the ``agda_decls`` file (checkdecls' input) to the parent of
+    its working directory, so it is run from ``blueprint/src`` to land the file
+    at ``blueprint/agda_decls``.
+    """
+    src_dir = (blueprint_dir / "src").resolve()
+    src = src_dir / "web.tex"
+    if not src.exists():
+        raise click.ClickException(
+            f"No web.tex found at {src}. Run `agdablueprint new` first?"
+        )
+    out_dir = (out_dir or (blueprint_dir / "web")).resolve()
+    config = (blueprint_dir.parent / "plastex.cfg").resolve()
+
+    # plasTeX copies its template assets read-only and does not clean the output
+    # directory, so a rebuild fails to overwrite them. Start from a clean tree.
+    shutil.rmtree(out_dir, ignore_errors=True)
+
+    argv = ["--plugins=agdablueprint", f"--dir={out_dir}"]
+    if config.exists():
+        argv += ["--config", str(config)]
+    argv.append(str(src))  # absolute path: \input{…} resolves against src/
+
+    # Run plasTeX *in this process* rather than shelling out to the `plastex`
+    # console script. agdablueprint and plasTeX share an environment, so the
+    # plugin is importable here; a packaged launcher, by contrast, prepends each
+    # dependency's bin to PATH, so a `plastex` subprocess would resolve to a
+    # standalone plasTeX that cannot import the plugin. plasTeX keys its working
+    # directory (and the agda_decls location) off the cwd, so run from
+    # blueprint/src.
+    old_cwd = os.getcwd()
+    try:
+        os.chdir(src_dir)
+        from plasTeX.client import main as plastex_main
+
+        plastex_main(argv)
+    except ImportError as exc:
+        raise click.ClickException(
+            f"plasTeX is not available ({exc}). Install the blueprint "
+            "toolchain (the Nix dev shell / blueprintEnv provides it)."
+        )
+    except SystemExit as exc:
+        if exc.code:
+            raise click.ClickException(
+                f"plasTeX web build failed (exit {exc.code})."
+            )
+    except Exception as exc:
+        raise click.ClickException(f"plasTeX web build failed: {exc}")
+    finally:
+        os.chdir(old_cwd)
+    return out_dir
+
+
+def _build_pdf(blueprint_dir: Path, out_dir: Path | None) -> Path:
+    """Build blueprint/src/print.tex to PDF and return the PDF path."""
+    src_dir = (blueprint_dir / "src").resolve()
+    src = src_dir / "print.tex"
+    if not src.exists():
+        raise click.ClickException(
+            f"No print.tex found at {src}. Run `agdablueprint new` first?"
+        )
+    out_dir = (out_dir or (blueprint_dir / "print")).resolve()
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    latexmk = shutil.which("latexmk")
+    if latexmk is not None:
+        cmd = [
+            latexmk,
+            "-pdf",
+            "-interaction=nonstopmode",
+            f"-outdir={out_dir}",
+            "print.tex",
+        ]
+    else:
+        pdflatex = _require_tool("pdflatex")
+        cmd = [
+            pdflatex,
+            "-interaction=nonstopmode",
+            f"-output-directory={out_dir}",
+            "print.tex",
+        ]
+
+    proc = subprocess.run(cmd, cwd=src_dir, capture_output=True, text=True)
+    pdf_path = out_dir / "print.pdf"
+    if proc.returncode != 0 or not pdf_path.exists():
+        raise click.ClickException(
+            "PDF build failed:\n" + proc.stdout + proc.stderr
+        )
+    return pdf_path
 
 
 def _default_decls_file(project_root: Path) -> Path | None:

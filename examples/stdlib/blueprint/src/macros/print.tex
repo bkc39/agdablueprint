@@ -1,0 +1,31 @@
+% Adapted from leanblueprint (Patrick Massot), Apache-2.0:
+%   https://github.com/PatrickMassot/leanblueprint
+% The \uses / \proves expl3 definitions below are reused verbatim; the no-op
+% status macros are renamed from Lean (\lean, \leanok, \mathlibok) to Agda
+% (\agda, \agdaok, \agdanotready, \stdlibok). See the NOTICE file.
+%
+% Macros used ONLY by the pdf build.
+%
+% It starts with dummy definitions that make the LaTeX compiler ignore the
+% web-only macros provided by plasTeX (the Agda status and graph macros), so the
+% same source compiles to PDF.
+
+% Web-only macros: no-ops in print.
+\newcommand{\agda}[1]{}
+\newcommand{\agdaok}{}
+\newcommand{\agdanotready}{}
+\newcommand{\stdlibok}{}
+\newcommand{\notready}{}
+\newcommand{\discussion}[1]{}
+
+% Make sure the arguments of \uses and \proves are real labels by emitting
+% invisible refs: LaTeX warns about an undefined label but nothing is printed.
+% This uses LaTeX3 programming, hence the expl3 syntax.
+\ExplSyntaxOn
+\NewDocumentCommand{\uses}{m}
+ {\clist_map_inline:nn{#1}{\vphantom{\ref{##1}}}%
+  \ignorespaces}
+\NewDocumentCommand{\proves}{m}
+ {\clist_map_inline:nn{#1}{\vphantom{\ref{##1}}}%
+  \ignorespaces}
+\ExplSyntaxOff

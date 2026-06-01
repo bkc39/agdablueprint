@@ -1,0 +1,22 @@
+name: blueprint
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+# Build the web dependency graph + PDF and verify every \agda{...} declaration
+# exists in the Agda project. Assumes a flake providing agda (with the libraries
+# your .agda-lib depends on), graphviz, texlive and agdablueprint on PATH — the
+# layout `nix flake init -t github:bkc39/agdablueprint#blueprint` scaffolds.
+jobs:
+  blueprint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v27
+        with:
+          extra_nix_config: |
+            experimental-features = nix-command flakes
+      - name: Build blueprint (pdf + web + checkdecls)
+        run: nix develop --command agdablueprint all

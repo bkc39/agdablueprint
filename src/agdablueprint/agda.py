@@ -78,6 +78,29 @@ class AgdaProject:
         return found
 
 
+def split_module(fqn: str, project_modules: set[str]) -> tuple[str, str]:
+    """Split a fully-qualified Agda name into ``(module, local)``.
+
+    Prefers the longest known project module that is a prefix of ``fqn``; falls
+    back to ``fqn`` minus its last component (covers library modules and names
+    not discovered locally). ``local`` is the part of ``fqn`` relative to
+    ``module`` (``""`` when ``fqn`` is exactly the module). This is the split
+    Agda's ``--html`` output uses: a definition lives in ``<module>.html`` under
+    the anchor ``local`` (e.g. ``root2.html#root-prime-irrational1``).
+    """
+    candidates = [
+        m for m in project_modules if fqn == m or fqn.startswith(m + ".")
+    ]
+    if candidates:
+        module = max(candidates, key=len)
+    elif "." in fqn:
+        module = fqn.rsplit(".", 1)[0]
+    else:
+        module = fqn
+    local = fqn[len(module) + 1 :] if fqn.startswith(module + ".") else ""
+    return module, local
+
+
 def _find_agda_lib(root: Path) -> Path | None:
     libs = sorted(root.glob("*.agda-lib"))
     return libs[0] if libs else None
@@ -113,12 +136,23 @@ def typecheck(
     include_dirs: list[Path],
     agda: str | None = None,
     extra_args: list[str] | None = None,
+    cwd: str | Path | None = None,
 ) -> subprocess.CompletedProcess:
-    """Run ``agda`` on ``file`` with the given include directories."""
+    """Run ``agda`` on ``file`` with the given include directories.
+
+    ``cwd`` sets the working directory for the run. Agda keys its ``.agda-lib``
+    project (and therefore ``depend:`` library resolution) off the working
+    directory, so callers checking a library-backed project should pass its root.
+    """
     exe = find_agda(agda)
     cmd = [exe]
     for inc in include_dirs:
         cmd += ["-i", str(inc)]
     cmd += list(extra_args or [])
     cmd.append(str(file))
-    return subprocess.run(cmd, capture_output=True, text=True)
+    return subprocess.run(
+        cmd,
+        capture_output=True,
+        text=True,
+        cwd=cwd if cwd is None else str(cwd),
+    )

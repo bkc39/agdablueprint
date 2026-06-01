@@ -1,0 +1,5 @@
+# latexmk configuration for the pdf build. `agdablueprint pdf` invokes latexmk
+# with an explicit output directory, but this lets you run `latexmk` by hand
+# from blueprint/src/ too.
+$pdf_mode = 1;
+$out_dir = '../print';

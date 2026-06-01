@@ -18,7 +18,7 @@ import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from agdablueprint.agda import AgdaProject, typecheck
+from agdablueprint.agda import AgdaProject, split_module, typecheck
 
 CHECKER_MODULE = "_agdablueprint_checkdecls"
 
@@ -49,18 +49,8 @@ def read_agda_decls(path: str | Path) -> list[str]:
 
 
 def _module_for(fqn: str, project_modules: set[str]) -> str:
-    """Pick the module to ``import`` so that ``fqn`` can be referenced.
-
-    Prefers the longest known project module that is a prefix of ``fqn``; falls
-    back to ``fqn`` minus its last component (covers library modules and modules
-    not discovered locally).
-    """
-    candidates = [
-        m for m in project_modules if fqn == m or fqn.startswith(m + ".")
-    ]
-    if candidates:
-        return max(candidates, key=len)
-    return fqn.rsplit(".", 1)[0] if "." in fqn else fqn
+    """Pick the module to ``import`` so that ``fqn`` can be referenced."""
+    return split_module(fqn, project_modules)[0]
 
 
 def _render_checker(names: list[str], project_modules: set[str]) -> str:
@@ -98,7 +88,10 @@ def check_declarations(
         # Worst case: one Agda run per missing name, plus a final clean run.
         for _ in range(len(names) + 1):
             checker.write_text(_render_checker(remaining, project_modules))
-            proc = typecheck(checker, includes, agda=agda)
+            # Run from the project root so Agda finds the project's `.agda-lib`
+            # and applies its `depend:` libraries (e.g. agda-stdlib); resolution
+            # is keyed off the working directory, not the checker's location.
+            proc = typecheck(checker, includes, agda=agda, cwd=project.root)
             if proc.returncode == 0:
                 break
             output = proc.stdout + proc.stderr

@@ -1,0 +1,25 @@
+% The mathematical content of your blueprint. This file is shared by both the
+% web build (web.tex) and the pdf build (print.tex), so use only macros defined
+% in macros/common.tex plus the agdablueprint status macros:
+%
+%   \agda{Module.name}  link a result to one or more Agda declarations
+%   \agdaok             the result is formalized in Agda (node turns green)
+%   \agdanotready       the result is explicitly not ready to formalize
+%   \stdlibok           the declaration lives in an upstream library
+%   \uses{label, ...}   declare dependencies (drawn as graph edges)
+%   \proves{label}      mark a proof as proving a labelled statement
+%
+% The starter content below is a placeholder — replace it with your project.
+
+\begin{definition}\label{def:example}
+  \agda{Example.Thing}\agdaok
+  A placeholder definition linked to an Agda declaration.
+\end{definition}
+
+\begin{theorem}\label{thm:example}\uses{def:example}
+  A placeholder theorem that uses the definition above.
+\end{theorem}
+
+\begin{proof}\uses{def:example}
+  Replace this with your blueprint.
+\end{proof}

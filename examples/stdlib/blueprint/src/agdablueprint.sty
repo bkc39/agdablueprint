@@ -1,0 +1,18 @@
+% agdablueprint LaTeX style.
+%
+% Adapted from leanblueprint's blueprint.sty (Patrick Massot), Apache-2.0:
+%   https://github.com/PatrickMassot/leanblueprint
+% The package body (\DeclareOption*{}, \ProcessOptions, \graphcolor) is reused
+% verbatim. See the NOTICE file.
+%
+% When the blueprint is compiled by plasTeX (the web build), the macros below
+% are provided by the Python package agdablueprint.Packages.agdablueprint and
+% this file does almost nothing. When the blueprint is compiled by a real LaTeX
+% engine (the pdf build), the web-only macros are made into no-ops by
+% macros/print.tex; here we only declare the package and a couple of shared
+% commands.
+\DeclareOption*{}
+\ProcessOptions
+
+% \graphcolor only affects the dependency graph, so it is a no-op in LaTeX.
+\newcommand{\graphcolor}[3]{}

@@ -49,6 +49,42 @@ PKG_DIR = Path(__file__).parent
 STATIC_DIR = Path(__file__).parent.parent / "static"
 
 
+def _discover_project_modules(working_dir: Path) -> set[str]:
+    """Find the Agda project near the blueprint and list its module names.
+
+    Walks up from plasTeX's working directory to the nearest ``.agda-lib`` and
+    returns that project's modules, so declaration links can be split into the
+    ``<module>.html#<name>`` form Agda's ``--html`` output uses. Returns an empty
+    set (links fall back to a last-component split) if no project is found.
+    """
+    from agdablueprint.agda import AgdaProject
+
+    for d in (working_dir, *working_dir.parents):
+        if any(d.glob("*.agda-lib")):
+            try:
+                return AgdaProject.discover(d).modules()
+            except OSError:
+                return set()
+    return set()
+
+
+def _agda_decl_url(dochome: str, fqn: str, project_modules: set[str]) -> str:
+    """Build the URL of ``fqn`` in the Agda ``--html`` docs rooted at ``dochome``.
+
+    Agda renders each module ``M`` to ``M.html`` and anchors every definition by
+    its module-relative name, so ``root2.root-prime-irrational1`` lives at
+    ``<dochome>/root2.html#root-prime-irrational1``. Empty when ``dochome`` is
+    unset (the template then renders plain, unlinked text).
+    """
+    from agdablueprint.agda import split_module
+
+    if not dochome:
+        return ""
+    module, local = split_module(fqn, project_modules)
+    base = f"{dochome}/{module}.html"
+    return f"{base}#{local}" if local else base
+
+
 # --------------------------------------------------------------------------- #
 # Project metadata macros
 # --------------------------------------------------------------------------- #
@@ -271,6 +307,8 @@ def ProcessOptions(options, document):
         project.
         """
         dochome = document.userdata.get("project_dochome", "")
+        working_dir = Path(document.userdata["working-dir"])
+        project_modules = _discover_project_modules(working_dir)
 
         for graph in document.userdata["dep_graph"]["graphs"].values():
             nodes = graph.nodes
@@ -278,7 +316,7 @@ def ProcessOptions(options, document):
                 agdadecls = node.userdata.get("agdadecls", [])
                 agda_urls = []
                 for agdadecl in agdadecls:
-                    url = f"{dochome}/{agdadecl}" if dochome else ""
+                    url = _agda_decl_url(dochome, agdadecl, project_modules)
                     agda_urls.append((agdadecl, url))
                 node.userdata["agda_urls"] = agda_urls
 
